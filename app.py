@@ -2,24 +2,38 @@ import streamlit as st
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 st.set_page_config(page_title="Network Analysis Dashboard", layout="wide")
 
 st.title("📊 LinkedIn Network Analysis Dashboard")
 
-# Load dataset
+# -------------------------
+# LOAD DATASET (FIXED)
+# -------------------------
 df = pd.read_json("linkedin-jobs__20230801_20230815_sample.ldjson", lines=True)
-df = df[['company_name', 'skills']].dropna()
-df['skills'] = df['skills'].apply(lambda x: [i.strip() for i in x.split(',')])
 
-# Build graph
+# Fix column names (based on dataset)
+df = df.rename(columns={
+    "company": "company_name"
+})
+
+# Create "skills" from job description
+df['skills'] = df['job_description'].fillna("").apply(lambda x: x.split()[:10])
+
+df = df[['company_name', 'skills']].dropna()
+
+# -------------------------
+# BUILD GRAPH
+# -------------------------
 G = nx.Graph()
+
 for _, row in df.iterrows():
     for skill in row['skills']:
         G.add_edge(row['company_name'], skill)
 
-# Sidebar
+# -------------------------
+# SIDEBAR
+# -------------------------
 section = st.sidebar.radio("Navigation", [
     "📂 Dataset",
     "📈 Trend Mining",
@@ -30,14 +44,14 @@ section = st.sidebar.radio("Navigation", [
 ])
 
 # -------------------------
-# 📂 DATASET
+# DATASET
 # -------------------------
 if section == "📂 Dataset":
     st.subheader("Dataset Preview")
     st.dataframe(df.head(20))
 
 # -------------------------
-# 📈 TREND MINING
+# TREND MINING
 # -------------------------
 elif section == "📈 Trend Mining":
     st.subheader("Top Skills")
@@ -61,18 +75,17 @@ elif section == "📈 Trend Mining":
     st.pyplot(fig)
 
 # -------------------------
-# 📊 CENTRALITY
+# CENTRALITY
 # -------------------------
 elif section == "📊 Centrality Analysis":
-    tab1, tab2, tab3 = st.tabs([
-        "Degree", "Betweenness", "Closeness"
-    ])
+
+    tab1, tab2, tab3 = st.tabs(["Degree", "Betweenness", "Closeness"])
 
     with tab1:
         degree = nx.degree_centrality(G)
         top = sorted(degree.items(), key=lambda x: x[1], reverse=True)[:10]
 
-        labels = [i[0][:10] + "..." for i in top]
+        labels = [i[0][:12] + "..." for i in top]
         values = [i[1] for i in top]
 
         fig, ax = plt.subplots()
@@ -85,7 +98,7 @@ elif section == "📊 Centrality Analysis":
         between = nx.betweenness_centrality(G)
         top = sorted(between.items(), key=lambda x: x[1], reverse=True)[:10]
 
-        labels = [i[0][:10] + "..." for i in top]
+        labels = [i[0][:12] + "..." for i in top]
         values = [i[1] for i in top]
 
         fig, ax = plt.subplots()
@@ -98,7 +111,7 @@ elif section == "📊 Centrality Analysis":
         close = nx.closeness_centrality(G)
         top = sorted(close.items(), key=lambda x: x[1], reverse=True)[:10]
 
-        labels = [i[0][:10] + "..." for i in top]
+        labels = [i[0][:12] + "..." for i in top]
         values = [i[1] for i in top]
 
         fig, ax = plt.subplots()
@@ -108,15 +121,16 @@ elif section == "📊 Centrality Analysis":
         st.pyplot(fig)
 
 # -------------------------
-# 🧩 STRUCTURAL HOLES
+# STRUCTURAL HOLES
 # -------------------------
 elif section == "🧩 Structural Holes":
+
     from networkx.algorithms.structuralholes import constraint
 
     constraint_values = constraint(G)
     top = sorted(constraint_values.items(), key=lambda x: x[1])[:10]
 
-    labels = [i[0][:10] + "..." for i in top]
+    labels = [i[0][:12] + "..." for i in top]
     values = [i[1] for i in top]
 
     fig, ax = plt.subplots()
@@ -126,15 +140,17 @@ elif section == "🧩 Structural Holes":
     st.pyplot(fig)
 
 # -------------------------
-# 🌐 NETWORK GRAPH
+# NETWORK GRAPH
 # -------------------------
 elif section == "🌐 Network Graph":
+
     st.subheader("Skill Network")
 
     all_skills = df['skills'].explode()
     top_skills = all_skills.value_counts().head(10)
 
     skill_graph = nx.Graph()
+
     for skills in df['skills']:
         for i in range(len(skills)):
             for j in range(i+1, len(skills)):
@@ -150,14 +166,14 @@ elif section == "🌐 Network Graph":
     st.pyplot(fig)
 
 # -------------------------
-# 🎯 COMMUNITY DETECTION
+# COMMUNITY DETECTION
 # -------------------------
 elif section == "🎯 Community Detection":
-    st.subheader("Community Detection")
 
     from networkx.algorithms import community
 
     skill_graph = nx.Graph()
+
     for skills in df['skills']:
         for i in range(len(skills)):
             for j in range(i+1, len(skills)):
