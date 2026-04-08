@@ -9,7 +9,7 @@ st.set_page_config(page_title="Network Analysis Dashboard", layout="wide")
 st.title("📊 LinkedIn Network Analysis Dashboard")
 
 # Load dataset
-df = pd.read_csv("linkedin_jobs.csv")
+df = pd.read_json("linkedin-jobs__20230801_20230815_sample.ldjson", lines=True)
 df = df[['company_name', 'skills']].dropna()
 df['skills'] = df['skills'].apply(lambda x: [i.strip() for i in x.split(',')])
 
